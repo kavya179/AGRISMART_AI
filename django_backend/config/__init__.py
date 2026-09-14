@@ -1,0 +1,1 @@
+# AgriSmart Django Config Package

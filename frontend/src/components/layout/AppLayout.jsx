@@ -47,6 +47,7 @@ export default function AppLayout({
         setCollapsed={setSidebarCollapsed}
         isMobileOpen={mobileSidebarOpen}
         setIsMobileOpen={setMobileSidebarOpen}
+        language={language}
         onLogout={onLogout}
       />
 

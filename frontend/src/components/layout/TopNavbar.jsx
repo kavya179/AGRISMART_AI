@@ -16,6 +16,53 @@ import { ROLES, ROLE_CONFIG, switchActiveRole } from '../../services/authService
 import { translations } from '../../translations';
 import BackendStatusBadge from '../BackendStatusBadge';
 
+const navbarTranslations = {
+  en: {
+    switchRole: 'SWITCH WORKSPACE ROLE',
+    profileSettings: 'Profile & Settings',
+    helpGuide: 'Help & Guide',
+    signOut: 'Sign Out',
+    roles: {
+      [ROLES.FARMER]: { label: 'Farmer', portal: 'Smart Farming Hub' },
+      [ROLES.EXPERT]: { label: 'Agricultural Expert', portal: 'Agronomist Command Center' },
+      [ROLES.ADMIN]: { label: 'System Admin', portal: 'Platform Administration' },
+    },
+  },
+  hi: {
+    switchRole: 'कार्यक्षेत्र भूमिका बदलें',
+    profileSettings: 'प्रोफ़ाइल और सेटिंग्स',
+    helpGuide: 'सहायता एवं मार्गदर्शिका',
+    signOut: 'लॉग आउट',
+    roles: {
+      [ROLES.FARMER]: { label: 'किसान', portal: 'स्मार्ट किसान केंद्र' },
+      [ROLES.EXPERT]: { label: 'कृषि विशेषज्ञ', portal: 'कृषि वैज्ञानिक केंद्र' },
+      [ROLES.ADMIN]: { label: 'सिस्टम एडमिन', portal: 'सिस्टम प्रशासन कंसोल' },
+    },
+  },
+  gu: {
+    switchRole: 'કાર્યક્ષેત્ર ભૂમિકા બદલો',
+    profileSettings: 'પ્રોફાઇલ અને સેટિંગ્સ',
+    helpGuide: 'મદદ અને માર્ગદર્શિકા',
+    signOut: 'સાઇન આઉટ',
+    roles: {
+      [ROLES.FARMER]: { label: 'ખેડૂત', portal: 'સ્માર્ટ ખેડૂત હબ' },
+      [ROLES.EXPERT]: { label: 'કૃષિ નિષ્ણાત', portal: 'કૃષિ વૈજ્ઞાનિક કેન્દ્ર' },
+      [ROLES.ADMIN]: { label: 'સિસ્ટમ એડમિન', portal: 'પ્લેટફોર્મ એડમિનિસ્ટ્રેશન' },
+    },
+  },
+  mr: {
+    switchRole: 'कार्यक्षेत्र भूमिका बदला',
+    profileSettings: 'प्रोफाईल आणि सेटिंग्ज',
+    helpGuide: 'मदत आणि मार्गदर्शक',
+    signOut: 'बाहेर पडा (लॉग आउट)',
+    roles: {
+      [ROLES.FARMER]: { label: 'शेतकरी', portal: 'स्मार्ट शेतकरी केंद्र' },
+      [ROLES.EXPERT]: { label: 'कृषी तज्ज्ञ', portal: 'कृषी शास्त्रज्ञ केंद्र' },
+      [ROLES.ADMIN]: { label: 'सिस्टम ॲडमिन', portal: 'प्रशासकीय कन्सोल' },
+    },
+  },
+};
+
 export default function TopNavbar({
   activePage,
   setActivePage,
@@ -32,8 +79,10 @@ export default function TopNavbar({
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const t = translations[language] || translations.en;
+  const navT = navbarTranslations[language] || navbarTranslations.en;
 
   const roleInfo = ROLE_CONFIG[currentRole] || ROLE_CONFIG[ROLES.FARMER];
+  const localizedRole = navT.roles[currentRole] || { label: roleInfo.label, portal: roleInfo.portalTitle };
 
   const handleRoleSelect = (newRole) => {
     setRoleDropdownOpen(false);
@@ -73,13 +122,13 @@ export default function TopNavbar({
         <div className="portal-indicator">
           <span className="portal-main-title">{t.appName || 'AgriSmart AI'}</span>
           <span className="portal-separator">•</span>
-          <span className="portal-sub-title">{roleInfo.portalTitle}</span>
+          <span className="portal-sub-title">{localizedRole.portal}</span>
         </div>
       </div>
 
       {/* Right Controls */}
       <div className="top-nav-right">
-        {/* Live Backend / Mock Demo Mode Status Badge */}
+        {/* Live Backend Status Badge */}
         <BackendStatusBadge />
 
         {/* Role Switcher Pill */}
@@ -93,7 +142,7 @@ export default function TopNavbar({
             title="Switch Workspace Role"
           >
             <span className="role-icon">{getRoleIcon(currentRole)}</span>
-            <span className="role-name">{roleInfo.label}</span>
+            <span className="role-name">{localizedRole.label}</span>
             <ChevronDown size={14} className={`dropdown-chevron ${roleDropdownOpen ? 'open' : ''}`} />
           </button>
 
@@ -104,9 +153,10 @@ export default function TopNavbar({
                 onClick={() => setRoleDropdownOpen(false)}
               />
               <div className="role-dropdown-menu">
-                <div className="dropdown-header">SWITCH ROLE VIEW</div>
+                <div className="dropdown-header">{navT.switchRole}</div>
                 {Object.keys(ROLE_CONFIG).map((roleKey) => {
                   const cfg = ROLE_CONFIG[roleKey];
+                  const localized = navT.roles[roleKey] || { label: cfg.label, portal: cfg.portalTitle };
                   const isSelected = currentRole === roleKey;
                   return (
                     <button
@@ -116,8 +166,8 @@ export default function TopNavbar({
                     >
                       <div className="item-icon-wrap">{getRoleIcon(roleKey)}</div>
                       <div className="item-text-wrap">
-                        <span className="item-label">{cfg.label}</span>
-                        <span className="item-portal">{cfg.portalTitle}</span>
+                        <span className="item-label">{localized.label}</span>
+                        <span className="item-portal">{localized.portal}</span>
                       </div>
                       {isSelected && <span className="item-active-dot" />}
                     </button>
@@ -171,7 +221,7 @@ export default function TopNavbar({
             </div>
             <div className="user-details-compact">
               <span className="user-name-compact">{userProfile?.fullName || 'User'}</span>
-              <span className="user-role-compact">{roleInfo.label}</span>
+              <span className="user-role-compact">{localizedRole.label}</span>
             </div>
             <ChevronDown size={12} className={`dropdown-chevron ${profileMenuOpen ? 'open' : ''}`} />
           </button>
@@ -198,7 +248,7 @@ export default function TopNavbar({
                 >
                   <div className="item-icon-wrap"><User size={16} /></div>
                   <div className="item-text-wrap">
-                    <span className="item-label">Profile & Settings</span>
+                    <span className="item-label">{navT.profileSettings}</span>
                   </div>
                 </button>
                 <button
@@ -210,7 +260,7 @@ export default function TopNavbar({
                 >
                   <div className="item-icon-wrap"><HelpCircle size={16} /></div>
                   <div className="item-text-wrap">
-                    <span className="item-label">Help & Guide</span>
+                    <span className="item-label">{navT.helpGuide}</span>
                   </div>
                 </button>
                 <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', margin: '0.25rem 0' }} />
@@ -222,9 +272,9 @@ export default function TopNavbar({
                     if (onLogout) onLogout();
                   }}
                 >
-                  <div className="item-icon-wrap"><LogOut size={16} color="#ef4444" /></div>
+                  <div className="item-icon-wrap"><LogOut size={19} color="#ef4444" /></div>
                   <div className="item-text-wrap">
-                    <span className="item-label" style={{ color: '#ef4444' }}>Sign Out</span>
+                    <span className="item-label" style={{ color: '#ef4444' }}>{navT.signOut}</span>
                   </div>
                 </button>
               </div>

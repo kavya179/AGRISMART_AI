@@ -1,6 +1,7 @@
 """
-AgriSmart AI - Single-Image Crop Disease Predictor CLI
+AgriSmart AI - Single-Image Crop Disease Predictor CLI & API Entrypoint
 Usage:
+  python ml/predict.py path/to/leaf.jpg
   python ml/predict.py --image path/to/leaf.jpg
 """
 import sys
@@ -14,9 +15,16 @@ from ml.inference.predict import main
 from ml.inference.predictor import CropDiseasePredictor
 
 
-def predict(image_path):
+def predict(image_path: str) -> str:
     """
-    Standard single-function interface: predict(image_path) -> class_label
+    Mandatory SIH functional interface:
+        predict(image_path) -> class_label
+
+    Args:
+        image_path (str): Path to the target crop leaf image.
+
+    Returns:
+        str: Predicted crop disease class label (e.g. 'Tomato___Early_blight' or 'Tomato___healthy')
     """
     predictor = CropDiseasePredictor()
     res = predictor.predict(image_path)

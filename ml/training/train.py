@@ -143,7 +143,7 @@ def train(
     torch.manual_seed(seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("=================================================================")
-    print("🌿 AgriSmart AI - Crop Disease Model Training")
+    print("AgriSmart AI - Crop Disease Model Training")
     print("=================================================================")
     print(f"Device:           {device}")
     print(f"Dataset Dir:      {data_dir}")
@@ -184,14 +184,14 @@ def train(
     if use_class_weights and data_info['class_weights'] is not None:
         weights_tensor = data_info['class_weights'].to(device)
         criterion = nn.CrossEntropyLoss(weight=weights_tensor)
-        print("  ✓ Class imbalance handling: Inverse frequency weights applied to Loss.")
+        print("  [INFO] Class imbalance handling: Inverse frequency weights applied to Loss.")
     else:
         criterion = nn.CrossEntropyLoss()
 
     # 5. Optimizer & LR Scheduler
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='max', factor=0.5, patience=2, verbose=True
+        optimizer, mode='max', factor=0.5, patience=2
     )
 
     # 6. Callbacks
@@ -252,9 +252,9 @@ def train(
             break
 
     total_time = time.time() - start_time
-    print(f"\n✓ Training Completed in {total_time/60:.2f} minutes.")
-    print(f"✓ Best Model Checkpoint: {best_model_file}")
-    print(f"✓ Class Mapping:         {class_map_file}")
+    print(f"\n[OK] Training Completed in {total_time/60:.2f} minutes.")
+    print(f"[OK] Best Model Checkpoint: {best_model_file}")
+    print(f"[OK] Class Mapping:         {class_map_file}")
 
     return {
         'model_path': str(best_model_file),

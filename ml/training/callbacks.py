@@ -84,7 +84,7 @@ class ModelCheckpoint:
                 save_payload['optimizer_state_dict'] = optimizer.state_dict()
 
             torch.save(save_payload, str(self.filepath))
-            print(f"  ⭐ Checkpoint Saved! {self.monitor}: {prev:.4f} -> {current_value:.4f} -> {self.filepath}")
+            print(f"  [CHECKPOINT] Saved! {self.monitor}: {prev:.4f} -> {current_value:.4f} -> {self.filepath}")
             return True
         return False
 

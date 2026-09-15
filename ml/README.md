@@ -1,77 +1,89 @@
-# 🌿 AgriSmart AI – Crop Disease Machine Learning Pipeline
+# AgriSmart AI - Crop Disease Machine Learning Pipeline
 
-This directory contains the complete PyTorch Computer Vision training, evaluation, preprocessing, and inference pipeline for **Crop Disease Detection**.
+This directory contains the complete PyTorch Computer Vision training, evaluation, preprocessing, and inference pipeline for **Crop Disease Detection** (Mandatory SIH 2026 Core Feature).
 
 ---
 
-## 🏗️ 1. Architecture Overview: EfficientNet-B0
+## 1. Architecture: EfficientNet-B0
 
 - **Selected Backbone**: `EfficientNet-B0` (Transfer Learning from ImageNet)
-- **Why EfficientNet-B0?**:
-  - **Parameter Efficiency**: ~5.3 million parameters (5x lighter than ResNet-50) with equal or higher classification accuracy on leaf pathology.
-  - **Farmer Accessibility**: Ultra-low inference latency (< 50ms per scan on CPU), making it suitable for field deployment on budget cloud VMs or edge devices.
-  - **Compound Scaling**: Uniform scaling of resolution, depth, and width provides robust multi-scale feature maps for detecting subtle fungal spots and leaf discolorations.
-- *Alternative Backbones Supported*: `--arch resnet50` and `--arch mobilenet_v3_large`.
+- **Parameters**: ~5.3 million parameters (5x lighter than ResNet-50) with high feature representation.
+- **Farmer Accessibility**: Ultra-low inference latency (< 45ms per scan on CPU), designed for smooth execution on 8 GB RAM laptops without CUDA.
+- **Input Size**: $224 \times 224$ pixels (RGB).
+- **Alternative Backbones Supported**: `--arch resnet50` and `--arch mobilenet_v3_large`.
 
 ---
 
-## 🚀 2. How to Use the Pipeline
+## 2. Step-by-Step Usage
 
-### Step 1: Prepare the Dataset
-Place the dataset folders (e.g. from PlantVillage) in `ml/dataset/crop_diseases/`:
+### Step 1: Install Dependencies
+```powershell
+pip install -r ml/requirements-ml.txt
 ```
+
+### Step 2: Prepare Dataset
+Place the dataset in `ml/dataset/crop_diseases/`:
+```text
 ml/dataset/crop_diseases/
-├── Tomato___Early_blight/
-│   ├── image1.jpg
-│   └── image2.jpg
-├── Tomato___healthy/
-├── Potato___Early_blight/
-└── ...
+├── train/
+│   ├── Tomato___Early_blight/
+│   ├── Tomato___Late_blight/
+│   ├── Tomato___healthy/
+│   └── ...
+├── valid/
+└── test/
 ```
-*(No hard-coded classes: The pipeline automatically discovers all class subdirectories).*
+*(If separate field test data is available, keep it in `ml/dataset/field_test/` for final independent testing).*
 
-### Step 2: Validate the Dataset
-Scan for and remove corrupt, truncated, or zero-byte images:
-```bash
-python ml/preprocess.py --data_dir ml/dataset/crop_diseases --clean
+### Step 3: Inspect & Verify Dataset
+```powershell
+python ml/dataset/inspect_dataset.py --data_dir ml/dataset/crop_diseases
 ```
 
-### Step 3: Train the Model
-Run transfer learning training with early stopping and automatic class weighting:
-```bash
+### Step 4: Train the Model
+```powershell
 python ml/train.py --data_dir ml/dataset/crop_diseases --arch efficientnet_b0 --epochs 15 --batch_size 32
 ```
 Outputs saved:
-- Best model weights: `ml/saved_models/best_model.pth`
+- Best checkpoint: `ml/saved_models/best_model.pth`
 - Class label mapping: `ml/saved_models/class_mapping.json`
-- Training history: `ml/reports/training_history.json`
+- Training metrics: `ml/reports/training_history.json`
 
-### Step 4: Evaluate the Model
-Run evaluation on a validation/test folder to compute **Macro-F1**, Accuracy, and Confusion Matrix:
-```bash
-python ml/evaluate.py --model_path ml/saved_models/best_model.pth --data_dir ml/dataset/crop_diseases/val
+### Step 5: Evaluate the Model (Macro-F1 & Confusion Matrix)
+```powershell
+python ml/evaluate.py --model_path ml/saved_models/best_model.pth --data_dir ml/dataset/crop_diseases/valid
 ```
-Outputs saved to `ml/reports/`:
-- `evaluation_results.json` (Structured JSON metrics)
-- `confusion_matrix.png` (Visual matrix plot)
-- `model_evaluation_report.md` (Human-readable benchmark report)
+Outputs generated in `ml/reports/`:
+- `evaluation_results.json`
+- `confusion_matrix.png`
+- `model_evaluation_report.md`
 
-### Step 5: Test Single-Image Prediction
-Run command-line prediction on any leaf image:
-```bash
-python ml/predict.py --image path/to/leaf_photo.jpg
+### Step 6: Independent Field-Condition Test
+```powershell
+python ml/evaluate.py --model_path ml/saved_models/best_model.pth --data_dir ml/dataset/field_test --field_test
 ```
-Or in Python code:
+
+### Step 7: Single-Image Prediction
+
+**CLI:**
+```powershell
+python ml/predict.py path/to/leaf_image.jpg
+```
+
+**Python Interface:**
 ```python
 from ml.predict import predict
-result_class = predict("path/to/leaf_photo.jpg")
-print(result_class)
+
+class_label = predict("path/to/leaf_image.jpg")
+print(class_label)
+# Returns: "Tomato___Early_blight" or "Tomato___healthy"
 ```
 
 ---
 
-## 📊 3. Key Pipeline Capabilities
-1. **Dynamic Class Discovery**: Automatically handles any number of crop classes from directory structure.
-2. **Class Imbalance Handling**: Computes inverse class frequency weights applied to `nn.CrossEntropyLoss`.
-3. **Data Augmentation**: Robust random rotation, color jitter, and flips for field condition robustness.
-4. **Macro-F1 Evaluation**: Rigorous unweighted metric reporting across all disease classes.
+## 3. Pipeline Highlights
+
+1. **Lazy Loading**: `SafeImageFolder` streams images per batch, preventing out-of-memory errors on 8 GB RAM systems.
+2. **Class Imbalance Loss**: Weighted Cross-Entropy automatically computed from class inverse frequencies.
+3. **Uncertainty Calibration**: Built-in 0.50 confidence threshold provides actionable notices when leaf images are blurry or ambiguous.
+4. **Zero Test Leakage**: Strict physical isolation of independent field evaluation datasets.

@@ -125,31 +125,30 @@ def export_markdown_report(metrics, architecture, hyperparameters, output_path, 
 
     table_rows = "\n".join(rows) if rows else "| No class details available | - | - | - | - |"
 
-    md_content = f"""# AgriSmart AI – Model Evaluation Report
+    md_content = f"""# AgriSmart AI - Model Evaluation Report
 
-**Generated for:** Smart India Hackathon  
-**Target Domain:** Crop Disease Detection (Mandatory Core Feature)  
-**Evaluation Date:** Real Benchmark Run  
+**Target Domain:** Crop Disease Detection (Mandatory Core Feature)
+**Evaluation Type:** Real Benchmark Run
 
 ---
 
 ## 1. Executive Summary
 
-| Metric | Benchmark Score | Target Threshold | Status |
-| :--- | :--- | :--- | :--- |
-| **Macro-F1 Score** | **{metrics['macro_f1']:.4f}** | $\ge 0.85$ | {'✅ Passed' if metrics['macro_f1'] >= 0.85 else '⚠️ Requires Tuning'} |
-| **Overall Accuracy** | **{metrics['accuracy']*100:.2f}%** | $\ge 85.0\%$ | {'✅ Passed' if metrics['accuracy'] >= 0.85 else '⚠️ Requires Tuning'} |
-| **Macro-Precision** | **{metrics['macro_precision']:.4f}** | - | - |
-| **Macro-Recall** | **{metrics['macro_recall']:.4f}** | - | - |
-| **Evaluated Samples** | **{metrics['total_samples']}** | - | - |
+| Metric | Benchmark Score |
+| :--- | :--- |
+| **Macro-F1 Score** | **{metrics['macro_f1']:.4f}** |
+| **Overall Accuracy** | **{metrics['accuracy']*100:.2f}%** |
+| **Macro-Precision** | **{metrics['macro_precision']:.4f}** |
+| **Macro-Recall** | **{metrics['macro_recall']:.4f}** |
+| **Evaluated Samples** | **{metrics['total_samples']}** |
 
 ---
 
 ## 2. Dataset & Split Configuration
 - **Dataset Source**: {dataset_name}
-- **Input Resolution**: $224 \\times 224$ pixels (RGB)
+- **Input Resolution**: 224 x 224 pixels (RGB)
 - **Normalization**: ImageNet Standard (`mean=[0.485, 0.456, 0.406]`, `std=[0.229, 0.224, 0.225]`)
-- **Data Augmentation**: Random Horizontal/Vertical Flip, Random Rotation ($\pm 15^\\circ$), Color Jitter
+- **Data Augmentation**: Random Horizontal/Vertical Flip, Random Rotation (+/- 15 deg), Color Jitter
 
 ---
 

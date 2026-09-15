@@ -8,24 +8,34 @@ import { getStoredUserProfile, saveStoredUserProfile, clearAllAppData } from './
 import { mockFarmerData, mockExpertData, mockAdminData } from '../data/mockData';
 
 /**
- * Perform User Login (Phone / Email OTP or Password)
+ * Perform User Login (Email / Phone + Password or OTP)
  */
 export async function loginUser(credentials) {
-  const { phone, role = ROLES.FARMER, otp, password } = credentials;
+  const { email, phone, role = ROLES.FARMER, otp, password } = credentials;
+  const identifier = email || phone || '';
 
   // 1. If in Live mode, attempt connection with backend auth endpoint
   if (!isMockMode()) {
     try {
-      const payload = { phone, role, otp, password };
-      // Attempt Node.js backend auth or Django auth
+      const payload = {
+        email: email || (phone ? undefined : identifier),
+        phone: phone || (email ? undefined : identifier),
+        phoneNumber: phone || identifier,
+        role,
+        otp,
+        password,
+      };
+
       const response = await apiFetch(`${NODE_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      }, 3500);
+      }, 4000);
 
-      if (response && response.token) {
-        localStorage.setItem('agrismart_token', response.token);
+      if (response && response.success) {
+        if (response.token) {
+          localStorage.setItem('agrismart_token', response.token);
+        }
         const profile = response.user || ROLE_CONFIG[role]?.defaultProfile;
         saveStoredUserProfile(profile);
         return {
@@ -36,8 +46,15 @@ export async function loginUser(credentials) {
         };
       }
     } catch (err) {
-      // If server is unavailable, inform caller or fall back gracefully
-      console.warn('Backend login endpoint unavailable, applying localized authentication session:', err.message);
+      const formatted = formatApiError(err, 'Login request failed.');
+      // If server returned an explicit error (like 401 or 400), return it directly
+      if (err?.status === 401 || err?.status === 400 || err?.status === 404) {
+        return {
+          success: false,
+          error: err?.data?.error || err?.data?.message || err.message,
+        };
+      }
+      console.warn('Backend login endpoint unavailable, applying localized authentication fallback:', err.message);
     }
   }
 
@@ -47,6 +64,7 @@ export async function loginUser(credentials) {
   const roleProfile = switchActiveRole(role);
   const userProfile = {
     ...roleProfile,
+    email: email || `${role}@agrismart.ai`,
     phone: phone || roleProfile.phone || '9876543210',
     lastLogin: new Date().toISOString(),
   };
@@ -61,42 +79,115 @@ export async function loginUser(credentials) {
 }
 
 /**
- * Perform User Registration
+ * Perform User Registration (Connected to POST /api/auth/register)
  */
-export async function registerUser(userData) {
-  const { name, phone, role = ROLES.FARMER, state, district, farmSize, preferredLanguage = 'en' } = userData;
+export async function registerUser(userData = {}) {
+  const fullName = userData.fullName || userData.name || 'Farm Producer';
+  const email = (userData.email || '').trim().toLowerCase();
+  const phone = userData.phone || userData.phoneNumber || '9876543210';
+  const password = userData.password || '';
+  const confirmPassword = userData.confirmPassword || '';
+  const role = userData.role || ROLES.FARMER;
+  const state = userData.state || 'Maharashtra';
+  const district = userData.district || 'Pune';
+  const village = userData.village || 'Khed';
+  const farmSizeAcres = userData.farmSizeAcres || userData.farmSize || '4.5';
+  const primaryCrop = userData.primaryCrop || 'Tomato';
+  const soilType = userData.soilType || 'Black Soil';
+  const specialization = userData.specialization || '';
+  const institution = userData.institution || '';
+  const preferredLanguage = userData.preferredLanguage || 'en';
 
+  // 1. Live Backend Request
   if (!isMockMode()) {
     try {
       const response = await apiFetch(`${NODE_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      }, 4000);
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          phoneNumber: phone,
+          password,
+          confirmPassword,
+          role,
+          state,
+          district,
+          village,
+          farmSizeAcres,
+          primaryCrop,
+          soilType,
+          specialization,
+          institution,
+          preferredLanguage,
+        }),
+      }, 5000);
 
       if (response && response.success) {
+        const saved = response.user || {
+          fullName,
+          email,
+          phone,
+          role,
+          state,
+          district,
+          village,
+          farmSizeAcres,
+          primaryCrop,
+          soilType,
+          location: `${district}, ${state}, India`,
+          crops: [primaryCrop, 'Wheat'],
+          specialization,
+          institution,
+          preferredLanguage,
+          registeredAt: new Date().toISOString(),
+        };
+
+        if (response.token) {
+          localStorage.setItem('agrismart_token', response.token);
+        }
+        saveStoredUserProfile(saved);
+
         return {
           success: true,
-          user: response.user,
+          message: response.message || 'Registration successful!',
+          user: saved,
+          token: response.token,
           isRealBackend: true,
         };
       }
     } catch (err) {
+      // If server returned duplicate email (409) or bad request (400), return error to user
+      if (err?.status === 409 || err?.status === 400) {
+        return {
+          success: false,
+          error: err?.data?.error || err?.data?.message || err.message,
+        };
+      }
       console.warn('Backend register endpoint unavailable, falling back to local registration:', err.message);
     }
   }
 
-  // Local / Mock registration
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  // 2. Local / Mock Registration Flow
+  await new Promise((resolve) => setTimeout(resolve, 350));
 
   const newProfile = {
-    name: name || 'Farm Producer',
-    phone: phone || '9876543210',
-    role: role,
-    location: `${district || 'Central'}, ${state || 'Gujarat'}, India`,
-    farmSize: farmSize ? `${farmSize} Acres` : '4.5 Acres',
-    soilType: 'Black Clay Loam',
-    crops: ['Tomato', 'Wheat', 'Cotton'],
+    fullName,
+    email: email || 'farmer@agrismart.ai',
+    phone,
+    role,
+    state,
+    district,
+    village,
+    farmSizeAcres,
+    primaryCrop,
+    soilType,
+    location: `${district}, ${state}, India`,
+    farmSize: `${farmSizeAcres} Acres`,
+    crops: [primaryCrop, 'Wheat'],
+    specialization,
+    institution,
     preferredLanguage,
     registeredAt: new Date().toISOString(),
   };
@@ -105,7 +196,9 @@ export async function registerUser(userData) {
 
   return {
     success: true,
+    message: 'Profile created successfully!',
     user: newProfile,
+    token: 'mock-jwt-token-agrismart-' + Date.now(),
     isMock: true,
   };
 }

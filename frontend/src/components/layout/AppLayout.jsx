@@ -28,7 +28,9 @@ export default function AppLayout({
   if (isAuthOrLanding) {
     return (
       <div className="app-standalone-wrapper">
-        <main className="standalone-main">{children}</main>
+        <main className={activePage === 'landing' ? 'landing-standalone-main' : 'standalone-main'}>
+          {children}
+        </main>
         <Footer setActivePage={setActivePage} language={language} />
       </div>
     );

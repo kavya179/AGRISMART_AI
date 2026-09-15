@@ -221,6 +221,7 @@ class DiseaseModelService:
     def predict(self, image_input):
         """
         Executes prediction dynamically based on the uploaded image.
+        Uses trained CNN model if loaded, with robust CV pathology fallback.
         """
         try:
             # Open and ensure RGB format
@@ -229,8 +230,33 @@ class DiseaseModelService:
             else:
                 pil_img = Image.open(image_input).convert('RGB')
 
-            # Run Computer Vision Pathology & Feature Analyzer on actual image pixels
-            raw_class_name, confidence_val = analyze_image_pathology(pil_img)
+            raw_class_name = None
+            confidence_val = 0.90
+
+            # 1. If PyTorch model is loaded, run neural inference
+            if HAS_TORCH and self.model is not None and len(self.idx_to_class) > 0:
+                try:
+                    import torchvision.transforms as transforms
+                    transform = transforms.Compose([
+                        transforms.Resize((224, 224)),
+                        transforms.ToTensor(),
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                    ])
+                    tensor = transform(pil_img).unsqueeze(0).to(self.device)
+                    with torch.no_grad():
+                        outputs = self.model(tensor)
+                        probs = F.softmax(outputs, dim=1)
+                        conf, pred_idx = torch.max(probs, 1)
+                        pred_idx_val = pred_idx.item()
+                        raw_class_name = self.idx_to_class.get(str(pred_idx_val), self.idx_to_class.get(pred_idx_val, None))
+                        confidence_val = round(float(conf.item()), 4)
+                except Exception as ml_err:
+                    logger.warning(f"PyTorch tensor inference fell back to CV pathology: {ml_err}")
+                    raw_class_name = None
+
+            # 2. Fallback to Computer Vision Pathology & Feature Analyzer
+            if not raw_class_name:
+                raw_class_name, confidence_val = analyze_image_pathology(pil_img)
 
             # Format human-readable output
             formatted_class = format_display_name(raw_class_name)

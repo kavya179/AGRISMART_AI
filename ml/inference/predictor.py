@@ -20,7 +20,7 @@ if str(BASE_DIR) not in sys.path:
 
 from ml.preprocessing.preprocess import validate_image_file, get_image_transforms
 from ml.dataset.dataset_loader import load_class_mapping
-from ml.training.train import build_model
+from ml.models import build_model
 
 
 class CropDiseasePredictor:

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ROLES, ROLE_CONFIG, switchActiveRole } from '../../services/authService';
 import { translations } from '../../translations';
+import BackendStatusBadge from '../BackendStatusBadge';
 
 export default function TopNavbar({
   activePage,
@@ -77,6 +78,9 @@ export default function TopNavbar({
 
       {/* Right Controls */}
       <div className="top-nav-right">
+        {/* Live Backend / Mock Demo Mode Status Badge */}
+        <BackendStatusBadge />
+
         {/* Role Switcher Pill */}
         <div className="role-switcher-container">
           <button

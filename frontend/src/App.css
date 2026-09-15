@@ -23,6 +23,19 @@
   padding: 2rem 1rem;
 }
 
+.landing-standalone-main {
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+@media (max-width: 860px) {
+  .landing-desktop-nav {
+    display: none !important;
+  }
+}
+
 /* ===================================================
    SIDEBAR (Role-Aware & Collapsible)
    =================================================== */

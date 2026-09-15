@@ -120,7 +120,11 @@ export default function App() {
     >
       {/* 1. Common / Authentication Pages */}
       {activePage === 'landing' && (
-        <LandingPage setActivePage={setActivePage} language={language} />
+        <LandingPage
+          setActivePage={setActivePage}
+          language={language}
+          setLanguage={handleLanguageChange}
+        />
       )}
 
       {activePage === 'login' && (
@@ -136,6 +140,7 @@ export default function App() {
         <Register
           setActivePage={setActivePage}
           setUserProfile={setUserProfile}
+          setCurrentRole={setCurrentRole}
           language={language}
         />
       )}

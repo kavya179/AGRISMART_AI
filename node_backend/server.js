@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const healthRoutes = require('./routes/healthRoutes');
 const farmerRoutes = require('./routes/farmerRoutes');
+const authRoutes = require('./routes/authRoutes');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
 
 // Load environment variables
@@ -31,6 +32,7 @@ app.use(morgan('dev'));
 
 // API Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/farmers', farmerRoutes);
 
 // Root Welcome Endpoint
@@ -56,3 +58,5 @@ app.listen(PORT, () => {
   console.log(`🩺 Health API: http://localhost:${PORT}/api/health`);
   console.log(`=================================================`);
 });
+
+module.exports = app;

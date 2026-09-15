@@ -40,9 +40,15 @@ export function clearStoredHistory() {
 export function getStoredUserProfile() {
   try {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : {
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed) {
+      if (!parsed.role) parsed.role = 'farmer';
+      return parsed;
+    }
+    return {
       fullName: 'Ramesh Patil',
       phone: '+91 98765 43210',
+      role: 'farmer',
       state: 'Maharashtra',
       district: 'Pune',
       village: 'Khed',
@@ -52,7 +58,18 @@ export function getStoredUserProfile() {
       preferredLanguage: 'en',
     };
   } catch {
-    return null;
+    return {
+      fullName: 'Ramesh Patil',
+      phone: '+91 98765 43210',
+      role: 'farmer',
+      state: 'Maharashtra',
+      district: 'Pune',
+      village: 'Khed',
+      farmSizeAcres: '4.5',
+      primaryCrop: 'Tomato',
+      soilType: 'Black Soil',
+      preferredLanguage: 'en',
+    };
   }
 }
 

@@ -1,0 +1,97 @@
+/* AgriSmart AI Design System & Theme Tokens */
+:root {
+  /* Agricultural Brand Palette */
+  --color-primary-dark: #143826;
+  --color-primary: #2d6a4f;
+  --color-primary-light: #40916c;
+  --color-primary-hover: #22543d;
+  --color-primary-tint: #ecfdf5;
+  --color-primary-border: #a7f3d0;
+
+  /* Accent Tones */
+  --color-gold: #b45309;
+  --color-gold-tint: #fef3c7;
+  --color-gold-border: #fde68a;
+  
+  --color-sky: #0369a1;
+  --color-sky-tint: #e0f2fe;
+  --color-sky-border: #bae6fd;
+
+  --color-purple: #6d28d9;
+  --color-purple-tint: #ede9fe;
+  --color-purple-border: #ddd6fe;
+
+  /* Role Badges */
+  --role-farmer-bg: #ecfdf5;
+  --role-farmer-text: #065f46;
+  --role-farmer-border: #a7f3d0;
+
+  --role-expert-bg: #e0f2fe;
+  --role-expert-text: #0369a1;
+  --role-expert-border: #bae6fd;
+
+  --role-admin-bg: #ede9fe;
+  --role-admin-text: #6d28d9;
+  --role-admin-border: #ddd6fe;
+
+  /* Status Colors */
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #86efac;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fca5a5;
+
+  --color-info: #0284c7;
+  --color-info-bg: #e0f2fe;
+  --color-info-border: #bae6fd;
+
+  /* Neutrals & Surfaces */
+  --bg-page: #f8faf7;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-muted: #f1f5f2;
+  --bg-subtle: #e9ecef;
+
+  --border-color: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --border-strong: #cbd5e1;
+
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+
+  /* Sidebar */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --sidebar-bg: #0e271a;
+  --sidebar-hover: #173d2a;
+  --sidebar-active: #22573c;
+  --sidebar-text: #d1fae5;
+  --sidebar-text-muted: #6ee7b7;
+  --sidebar-border: #1a432e;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 2px 8px -1px rgba(0, 0, 0, 0.06), 0 1px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: 0 10px 28px -4px rgba(0, 0, 0, 0.12), 0 4px 10px -2px rgba(0, 0, 0, 0.06);
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}

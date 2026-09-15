@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Phone, ArrowRight, ShieldCheck, Sprout } from 'lucide-react';
-import PageHeader from '../components/PageHeader';
+import { Phone, ArrowRight, ShieldCheck, Sprout, Stethoscope, Shield } from 'lucide-react';
+import { ROLES, ROLE_CONFIG, switchActiveRole } from '../services/authService';
+import { saveStoredUserProfile } from '../services/historyStorage';
 
-export default function Login({ setActivePage, setUserProfile }) {
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+export default function Login({ setActivePage, setUserProfile, setCurrentRole }) {
+  const [selectedRole, setSelectedRole] = useState(ROLES.FARMER);
+  const [phone, setPhone] = useState('9876543210');
+  const [otp, setOtp] = useState('1234');
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
 
   const handleSendOtp = (e) => {
@@ -16,29 +18,110 @@ export default function Login({ setActivePage, setUserProfile }) {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Log in user
-    setActivePage('dashboard');
+    const updatedProfile = switchActiveRole(selectedRole);
+    if (setUserProfile) setUserProfile(updatedProfile);
+    if (setCurrentRole) setCurrentRole(selectedRole);
+    const targetDashboard = ROLE_CONFIG[selectedRole].dashboardPage;
+    setActivePage(targetDashboard);
   };
 
   return (
-    <div style={{ maxWidth: '460px', margin: '2rem auto' }}>
-      <div className="agri-card" style={{ padding: '2rem 1.5rem' }}>
+    <div style={{ maxWidth: '480px', margin: '2.5rem auto', padding: '0 1rem' }}>
+      <div className="agri-card" style={{ padding: '2rem 1.75rem', boxShadow: 'var(--shadow-elevated)' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'inline-flex', background: 'var(--color-primary-tint)', padding: '0.75rem', borderRadius: '50%', color: 'var(--color-primary)', marginBottom: '0.75rem' }}>
-            <Sprout size={32} />
+          <div
+            style={{
+              display: 'inline-flex',
+              background: 'var(--color-primary-tint)',
+              padding: '0.85rem',
+              borderRadius: '50%',
+              color: 'var(--color-primary)',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <Sprout size={36} />
           </div>
-          <h2 style={{ fontSize: '1.5rem', color: 'var(--color-primary-dark)' }}>Farmer Sign In</h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-            Enter your mobile number to access your farm's records.
+          <h2 style={{ fontSize: '1.6rem', color: 'var(--color-primary-dark)', fontWeight: 800 }}>
+            AgriSmart AI Portal
+          </h2>
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Select your workspace role to access your records
           </p>
+        </div>
+
+        {/* Role Selection Tabs */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label className="form-label" style={{ textAlign: 'center', display: 'block', marginBottom: '0.5rem' }}>
+            Select Workspace Role
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedRole(ROLES.FARMER)}
+              className={selectedRole === ROLES.FARMER ? 'btn-primary' : 'btn-secondary'}
+              style={{
+                flexDirection: 'column',
+                gap: '0.25rem',
+                padding: '0.6rem 0.3rem',
+                minHeight: '62px',
+                fontSize: '0.82rem',
+              }}
+            >
+              <Sprout size={18} />
+              <span>Farmer</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedRole(ROLES.EXPERT)}
+              className={selectedRole === ROLES.EXPERT ? 'btn-primary' : 'btn-secondary'}
+              style={{
+                flexDirection: 'column',
+                gap: '0.25rem',
+                padding: '0.6rem 0.3rem',
+                minHeight: '62px',
+                fontSize: '0.82rem',
+              }}
+            >
+              <Stethoscope size={18} />
+              <span>Expert</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedRole(ROLES.ADMIN)}
+              className={selectedRole === ROLES.ADMIN ? 'btn-primary' : 'btn-secondary'}
+              style={{
+                flexDirection: 'column',
+                gap: '0.25rem',
+                padding: '0.6rem 0.3rem',
+                minHeight: '62px',
+                fontSize: '0.82rem',
+              }}
+            >
+              <Shield size={18} />
+              <span>Admin</span>
+            </button>
+          </div>
         </div>
 
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>
             <div className="form-group">
-              <label className="form-label">Mobile Number</label>
+              <label className="form-label">
+                {selectedRole === ROLES.ADMIN ? 'Admin Email / Phone' : 'Registered Mobile Number'}
+              </label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span style={{ padding: '0.7rem 0.8rem', background: 'var(--bg-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 600 }}>
+                <span
+                  style={{
+                    padding: '0.7rem 0.8rem',
+                    background: 'var(--bg-muted)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                  }}
+                >
                   +91
                 </span>
                 <input
@@ -77,26 +160,49 @@ export default function Login({ setActivePage, setUserProfile }) {
             </div>
 
             <button type="submit" className="btn-primary btn-block" style={{ marginTop: '1rem', padding: '0.85rem' }}>
-              <span>Sign In to Your Farm</span>
+              <span>Sign In as {ROLE_CONFIG[selectedRole].label}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setStep('phone')}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.85rem', width: '100%', marginTop: '0.75rem', cursor: 'pointer' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                fontSize: '0.85rem',
+                width: '100%',
+                marginTop: '0.75rem',
+                cursor: 'pointer',
+              }}
             >
               Change phone number
             </button>
           </form>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: '1.5rem',
+            paddingTop: '1.25rem',
+            borderTop: '1px solid var(--border-subtle)',
+            fontSize: '0.88rem',
+          }}
+        >
           <span>New to AgriSmart? </span>
           <button
             onClick={() => setActivePage('register')}
-            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary)', fontWeight: 700, cursor: 'pointer' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: 'var(--color-primary)',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
           >
-            Register Farm Profile
+            Register Profile
           </button>
         </div>
       </div>

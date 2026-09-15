@@ -1,28 +1,47 @@
 import React, { useState } from 'react';
-import { Phone, ArrowRight, ShieldCheck, Sprout, Stethoscope, Shield } from 'lucide-react';
+import { Phone, ArrowRight, ShieldCheck, Sprout, Stethoscope, Shield, AlertCircle, Loader } from 'lucide-react';
 import { ROLES, ROLE_CONFIG, switchActiveRole } from '../services/authService';
-import { saveStoredUserProfile } from '../services/historyStorage';
+import { loginUser } from '../services/authApi';
 
 export default function Login({ setActivePage, setUserProfile, setCurrentRole }) {
   const [selectedRole, setSelectedRole] = useState(ROLES.FARMER);
   const [phone, setPhone] = useState('9876543210');
   const [otp, setOtp] = useState('1234');
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const handleSendOtp = (e) => {
     e.preventDefault();
     if (phone.length >= 10) {
+      setErrorMsg(null);
       setStep('otp');
+    } else {
+      setErrorMsg('Please enter a valid 10-digit mobile number.');
     }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const updatedProfile = switchActiveRole(selectedRole);
-    if (setUserProfile) setUserProfile(updatedProfile);
-    if (setCurrentRole) setCurrentRole(selectedRole);
-    const targetDashboard = ROLE_CONFIG[selectedRole].dashboardPage;
-    setActivePage(targetDashboard);
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await loginUser({ phone, role: selectedRole, otp });
+      if (res && res.success) {
+        const updatedProfile = res.user;
+        if (setUserProfile) setUserProfile(updatedProfile);
+        if (setCurrentRole) setCurrentRole(selectedRole);
+        const targetDashboard = ROLE_CONFIG[selectedRole].dashboardPage;
+        setActivePage(targetDashboard);
+      } else {
+        setErrorMsg(res?.error || 'Login failed. Please verify credentials.');
+      }
+    } catch (err) {
+      setErrorMsg('An unexpected error occurred during login. Please retry.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,6 +123,26 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
             </button>
           </div>
         </div>
+
+        {errorMsg && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <AlertCircle size={16} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>

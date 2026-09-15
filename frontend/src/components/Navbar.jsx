@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sprout, User } from 'lucide-react';
 import { translations } from '../translations';
+import BackendStatusBadge from './BackendStatusBadge';
 
 export default function Navbar({ activePage, setActivePage, language, setLanguage }) {
   const t = translations[language] || translations.en;
@@ -44,6 +45,8 @@ export default function Navbar({ activePage, setActivePage, language, setLanguag
         </nav>
 
         <div className="nav-right-tools">
+          <BackendStatusBadge />
+
           <select
             className="lang-select"
             value={language}

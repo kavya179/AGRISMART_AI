@@ -1,9 +1,10 @@
 /**
- * AgriSmart AI - Crop Disease Detection Service Layer
- * Cleanly simulates and interfaces with Django REST AI Engine (POST /api/disease/predict/)
+ * AgriSmart AI - Crop Disease Detection Service Module
+ * Cleanly interfaces with Django REST AI Engine:
+ * POST /api/disease/predict/ (multipart/form-data with 'image' field)
+ * GET /api/disease/status/
  */
-
-const DJANGO_URL = import.meta.env.VITE_DJANGO_API_URL || 'http://localhost:8000/api';
+import { DJANGO_BASE_URL, isMockMode, apiFetch, formatApiError } from './apiConfig';
 
 /**
  * Standard Mock Knowledge Base for Plant Pathology
@@ -68,7 +69,7 @@ const MOCK_DIAGNOSES = [
     confidence: 54.2,
     severity: 'Unknown',
     explanation:
-      'The image features blurriness, suboptimal lighting, or ambiguous leaf symptoms that could not be classified with high confidence against the 38 trained plant disease models.',
+      'The image features blurriness, suboptimal lighting, or ambiguous leaf symptoms that could not be classified with high confidence against the trained plant disease models.',
     recommendation:
       'Result is uncertain. Please upload a clearer photo taken in natural daylight with the affected leaf centered, or submit this case for review by an agricultural expert.',
     preventionTips: [
@@ -99,55 +100,78 @@ const MOCK_DIAGNOSES = [
 
 /**
  * Predict crop disease from an uploaded image file
- * Simulates POST /api/disease/predict/ with realistic response delay and fallback
+ * Interfacing with Django REST Engine (POST /api/disease/predict/)
  */
 export async function predictCropDisease(imageFile, sampleType = null) {
-  // Check if real Django server is reachable
-  let realResult = null;
-  try {
-    const formData = new FormData();
-    formData.append('image', imageFile);
+  if (!imageFile) {
+    return {
+      success: false,
+      error: 'No image file provided for crop disease diagnosis.',
+      code: 'INVALID_INPUT',
+    };
+  }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+  // 1. If in Live mode, attempt connection with real Django REST Engine
+  if (!isMockMode()) {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
 
-    const response = await fetch(`${DJANGO_URL}/disease/predict/`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout for ML inference
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.prediction) {
-        realResult = {
-          success: true,
-          crop: data.prediction.crop || 'Crop',
-          disease: data.prediction.class || 'Detected Condition',
-          confidence: Math.round(data.prediction.confidence * 100) || 92,
-          status: data.prediction.status || 'diseased',
-          severity: data.prediction.severity || 'Moderate',
-          explanation: data.guidance?.explanation || 'AI analysis completed.',
-          recommendation: data.guidance?.recommendation || 'Follow standard agronomic care.',
-          preventionTips: data.guidance?.precautions || [],
-          expertConsultationRequired: data.prediction.confidence < 0.7,
-          isRealBackend: true,
+      const response = await fetch(`${DJANGO_BASE_URL}/disease/predict/`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const errorMsg =
+          data?.error ||
+          data?.details?.image?.[0] ||
+          `Django prediction service failed with status ${response.status}.`;
+        return {
+          success: false,
+          error: errorMsg,
+          code: 'PREDICTION_ERROR',
         };
       }
+
+      if (data && data.success && data.prediction) {
+        return {
+          success: true,
+          crop: data.prediction.crop || (data.prediction.class?.split('___')[0] || 'Crop'),
+          disease: data.prediction.class || 'Detected Condition',
+          confidence: Math.round((data.prediction.confidence || 0.9) * 100),
+          status: data.prediction.status || 'diseased',
+          severity: data.prediction.severity || (data.prediction.status === 'healthy' ? 'None' : 'Moderate'),
+          explanation: data.guidance?.explanation || 'Pathological analysis completed via Computer Vision & ML.',
+          recommendation: data.guidance?.recommendation || 'Follow standard agronomic crop care.',
+          preventionTips: data.guidance?.precautions || data.guidance?.preventionTips || [
+            'Inspect crop foliage weekly for early symptom recurrence.',
+            'Maintain optimal soil moisture avoiding standing water.',
+          ],
+          expertConsultationRequired: (data.prediction.confidence || 1) < 0.70,
+          isRealBackend: true,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch (err) {
+      console.warn('Real Django disease predict service unavailable, falling back:', err.message);
+      // If user strictly disabled mock mode, return actual error
+      if (!isMockMode()) {
+        return formatApiError(err, 'Unable to connect to Django crop diagnosis service on port 8000.');
+      }
     }
-  } catch (e) {
-    // Graceful fallback to mock service during development/offline demo
   }
 
-  if (realResult) {
-    return realResult;
-  }
+  // 2. Local / Mock Inference Simulation (Fast, CPU-safe)
+  await new Promise((resolve) => setTimeout(resolve, 1100));
 
-  // Simulate AI model inference latency (1.1 - 1.4 seconds)
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-
-  // Determine mock diagnosis from sampleType or filename heuristics
   let matchedDiagnosis = MOCK_DIAGNOSES[0]; // Default Tomato Early Blight
 
   const fileName = (imageFile?.name || '').toLowerCase();
@@ -155,14 +179,23 @@ export async function predictCropDisease(imageFile, sampleType = null) {
 
   if (explicitSample.includes('healthy') || fileName.includes('healthy')) {
     matchedDiagnosis = MOCK_DIAGNOSES[1];
-  } else if (explicitSample.includes('potato') || explicitSample.includes('late') || fileName.includes('potato') || fileName.includes('late')) {
+  } else if (
+    explicitSample.includes('potato') ||
+    explicitSample.includes('late') ||
+    fileName.includes('potato') ||
+    fileName.includes('late')
+  ) {
     matchedDiagnosis = MOCK_DIAGNOSES[2];
-  } else if (explicitSample.includes('uncertain') || explicitSample.includes('blurry') || fileName.includes('blur') || fileName.includes('uncertain')) {
+  } else if (
+    explicitSample.includes('uncertain') ||
+    explicitSample.includes('blurry') ||
+    fileName.includes('blur') ||
+    fileName.includes('uncertain')
+  ) {
     matchedDiagnosis = MOCK_DIAGNOSES[3];
   } else if (explicitSample.includes('cotton') || fileName.includes('cotton')) {
     matchedDiagnosis = MOCK_DIAGNOSES[4];
   } else {
-    // Pick based on simple hash of file name for consistency
     const charCode = fileName.charCodeAt(0) || 0;
     matchedDiagnosis = MOCK_DIAGNOSES[charCode % MOCK_DIAGNOSES.length];
   }
@@ -173,6 +206,24 @@ export async function predictCropDisease(imageFile, sampleType = null) {
     isMock: true,
     timestamp: new Date().toISOString(),
   };
+}
+
+/**
+ * Check Disease Detection ML Service Status
+ */
+export async function checkDiseaseServiceStatus() {
+  try {
+    const response = await apiFetch(`${DJANGO_BASE_URL}/disease/status/`, { method: 'GET' }, 3000);
+    return {
+      online: true,
+      data: response,
+    };
+  } catch (e) {
+    return {
+      online: false,
+      error: e.message,
+    };
+  }
 }
 
 /**

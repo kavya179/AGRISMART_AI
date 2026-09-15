@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Sprout, Check, ArrowRight } from 'lucide-react';
-import { saveStoredUserProfile } from '../services/historyStorage';
+import { Sprout, Check, ArrowRight, AlertCircle, Loader } from 'lucide-react';
+import { registerUser } from '../services/authApi';
 
 export default function Register({ setActivePage, setUserProfile }) {
   const [form, setForm] = useState({
@@ -13,12 +13,26 @@ export default function Register({ setActivePage, setUserProfile }) {
     primaryCrop: 'Tomato',
     soilType: 'Black Soil',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setUserProfile(form);
-    saveStoredUserProfile(form);
-    setActivePage('dashboard');
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await registerUser(form);
+      if (res && res.success) {
+        if (setUserProfile) setUserProfile(res.user);
+        setActivePage('dashboard');
+      } else {
+        setErrorMsg(res?.error || 'Registration failed. Please check form inputs.');
+      }
+    } catch (err) {
+      setErrorMsg('An unexpected error occurred during registration.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,6 +47,26 @@ export default function Register({ setActivePage, setUserProfile }) {
             Join AgriSmart to receive localized disease alerts and tailored watering guidance.
           </p>
         </div>
+
+        {errorMsg && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <AlertCircle size={16} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginBottom: '1rem' }}>

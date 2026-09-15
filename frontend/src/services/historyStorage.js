@@ -37,6 +37,12 @@ export function clearStoredHistory() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+export function clearAllAppData() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('agrismart_token');
+}
+
 export function getStoredUserProfile() {
   try {
     const raw = localStorage.getItem(USER_KEY);

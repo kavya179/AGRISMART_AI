@@ -1,78 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Droplets, Calendar, Clock, AlertTriangle, CheckCircle2, CloudRain, Info, Send } from 'lucide-react';
+import {
+  Droplets,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  CloudRain,
+  Info,
+  Send,
+  Zap,
+  Sparkles,
+  ArrowRight,
+  RefreshCw,
+  Sliders,
+} from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { getSmartIrrigationAdvice } from '../services/api';
+import SectionHeader from '../components/ui/SectionHeader';
+import DashboardCard from '../components/ui/DashboardCard';
+import StatCard from '../components/ui/StatCard';
+import StatusBadge from '../components/ui/StatusBadge';
+import {
+  getSmartIrrigationAdvice,
+  getIrrigationPresets,
+} from '../services/irrigationApi';
 import { translations } from '../translations';
 
-export default function SmartIrrigation({ onBack, language, currentLang, userProfile }) {
-  const activeLang = language || currentLang || 'en';
-  const t = translations[activeLang] || translations.en;
+export default function SmartIrrigation({ onBack, language = 'en', userProfile }) {
+  const t = translations[language] || translations.en;
+  const presets = getIrrigationPresets();
 
-  const [cropType, setCropType] = useState(userProfile?.primaryCrop || 'Tomato');
-  const [soilMoisture, setSoilMoisture] = useState(38);
-  const [growthStage, setGrowthStage] = useState('Flowering');
-  const [weatherForecast, setWeatherForecast] = useState('Partly Sunny');
+  const [formData, setFormData] = useState({
+    crop_type: userProfile?.primaryCrop || 'Tomato',
+    soil_moisture: 38,
+    growth_stage: 'Flowering / Reproductive',
+    weather_forecast: 'Partly Sunny',
+    expected_rainfall_mm: 0,
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [adviceResult, setAdviceResult] = useState(null);
 
-  // Fetch advice automatically or upon parameter change
-  const fetchAdvice = async () => {
+  const fetchAdvice = async (params = formData) => {
     setIsLoading(true);
     try {
-      const response = await getSmartIrrigationAdvice({
-        soil_moisture: Number(soilMoisture),
-        weather_forecast: weatherForecast,
-        crop_type: cropType,
-        growth_stage: growthStage,
-      });
-
+      const response = await getSmartIrrigationAdvice(params);
       if (response && response.success) {
         setAdviceResult(response.irrigation_advice);
-      } else {
-        // Deterministic fallback matching backend rules
-        const isRain = weatherForecast.toLowerCase().includes('rain');
-        if (isRain && soilMoisture >= 25) {
-          setAdviceResult({
-            irrigation_required: false,
-            priority: 'High (Conservation)',
-            recommended_action: 'Delay watering',
-            reason: 'Rain is likely within the next 24 hours. Natural rainfall will replenish root-zone moisture.',
-            metrics: {
-              soil_moisture_level: `${soilMoisture}%`,
-              optimal_threshold: '50%',
-              suggested_duration_mins: 0,
-              water_volume_liters_per_sqm: 0,
-            }
-          });
-        } else if (soilMoisture < 45) {
-          setAdviceResult({
-            irrigation_required: true,
-            priority: growthStage === 'Flowering' ? 'Critical / Urgent' : 'High',
-            recommended_action: 'Irrigate for 45-60 minutes (Drip / Furrow)',
-            reason: `Soil moisture (${soilMoisture}%) is below the critical threshold for ${cropType} during ${growthStage} stage.`,
-            metrics: {
-              soil_moisture_level: `${soilMoisture}%`,
-              optimal_threshold: '50%',
-              suggested_duration_mins: 50,
-              water_volume_liters_per_sqm: 14.5,
-            }
-          });
-        } else {
-          setAdviceResult({
-            irrigation_required: false,
-            priority: 'Low',
-            recommended_action: 'No irrigation needed today',
-            reason: `Soil moisture level is adequate for current growth stage.`,
-            metrics: {
-              soil_moisture_level: `${soilMoisture}%`,
-              optimal_threshold: '50%',
-              suggested_duration_mins: 0,
-              water_volume_liters_per_sqm: 0,
-            }
-          });
-        }
       }
     } catch (err) {
       console.error(err);
@@ -85,210 +58,299 @@ export default function SmartIrrigation({ onBack, language, currentLang, userPro
     fetchAdvice();
   }, []);
 
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    fetchAdvice();
+  const handleApplyPreset = (preset) => {
+    setFormData(preset.data);
+    fetchAdvice(preset.data);
   };
 
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    fetchAdvice(formData);
+  };
+
+  const moisture = Number(formData.soil_moisture);
+
   return (
-    <div>
-      <PageHeader
-        title={t.waterTitle || "Smart Watering Advice"}
-        description={t.waterDesc || "Optimize your irrigation timing to conserve water, save electricity, and prevent fungal root diseases."}
-        onBack={onBack}
+    <div className="smart-irrigation-page">
+      <SectionHeader
+        title={t.waterTitle || 'Smart Irrigation & Water Scheduling'}
+        subtitle="Precision soil moisture intelligence to optimize watering cycles, prevent fungal root rot, and conserve water and electricity."
+        badge={{ text: 'Moisture AI v2.4', bg: 'var(--color-sky-tint)', color: 'var(--color-sky)', border: 'var(--color-sky-border)' }}
       />
 
-      {/* Main Watering Decision Card */}
-      {isLoading && !adviceResult ? (
-        <LoadingSpinner message="Evaluating soil moisture and agro-meteorological conditions..." />
-      ) : adviceResult ? (
-        <div
-          className="agri-card"
-          style={{
-            borderLeft: adviceResult.irrigation_required ? '6px solid var(--color-warning)' : '6px solid var(--color-primary)',
-            background: adviceResult.irrigation_required ? '#fffbf5' : '#f7fcf9',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ maxWidth: '650px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                <span
-                  className="badge"
-                  style={{
-                    background: adviceResult.irrigation_required ? '#fef3c7' : '#dcfce7',
-                    color: adviceResult.irrigation_required ? '#92400e' : '#166534',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                  }}
-                >
-                  <Droplets size={14} />
-                  <span>
-                    Status: {adviceResult.irrigation_required ? 'Watering Required' : 'Adequate Moisture'}
-                  </span>
-                </span>
-
-                <span
-                  className="badge"
-                  style={{
-                    background: adviceResult.priority?.toLowerCase().includes('critical') ? '#fee2e2' : '#f1f5f9',
-                    color: adviceResult.priority?.toLowerCase().includes('critical') ? '#991b1b' : '#334155',
-                  }}
-                >
-                  Priority: {adviceResult.priority}
-                </span>
-              </div>
-
-              <h2 style={{ fontSize: '1.6rem', color: adviceResult.irrigation_required ? '#b45309' : 'var(--color-primary-dark)', marginBottom: '0.4rem' }}>
-                {adviceResult.recommended_action}
-              </h2>
-              
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.96rem', marginTop: '0.2rem', lineHeight: 1.5 }}>
-                {adviceResult.reason}
-              </p>
-            </div>
-
-            <div style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.85rem 1.4rem', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.soilMoistureLabel || 'Soil Moisture Level'}</span>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: adviceResult.irrigation_required ? 'var(--color-warning)' : 'var(--color-primary)' }}>
-                {soilMoisture}%
-              </div>
-              <span style={{ fontSize: '0.78rem', color: adviceResult.irrigation_required ? '#b45309' : 'var(--color-success)', fontWeight: 600 }}>
-                {adviceResult.irrigation_required ? 'Below Threshold' : (t.optimalRange || 'Optimal Range')}
-              </span>
-            </div>
-          </div>
-
-          {/* Schedule Recommendation */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '1.25rem' }}>
-            <div style={{ background: 'white', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.25rem' }}>
-                <Calendar size={15} />
-                <span>Recommended Timing</span>
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {adviceResult.irrigation_required ? 'Early Morning (6:00 - 8:30 AM)' : 'Re-check in 24-48 Hours'}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>Prevents solar evaporation loss</div>
-            </div>
-
-            <div style={{ background: 'white', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.25rem' }}>
-                <Clock size={15} />
-                <span>{t.durationLabel || 'Recommended Duration'}</span>
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {adviceResult.metrics?.suggested_duration_mins > 0 ? `${adviceResult.metrics.suggested_duration_mins} Minutes (Drip)` : '0 Minutes'}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
-                {adviceResult.metrics?.water_volume_liters_per_sqm > 0 ? `Approx ${adviceResult.metrics.water_volume_liters_per_sqm} L / m²` : 'Zero water consumed'}
-              </div>
-            </div>
-
-            <div style={{ background: 'white', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '0.25rem' }}>
-                <CloudRain size={15} />
-                <span>{t.weatherImpactLabel || 'Weather Forecast Impact'}</span>
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {weatherForecast}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
-                {weatherForecast.toLowerCase().includes('rain') ? 'Rain override active' : 'Standard FAO-56 evaporation'}
-              </div>
-            </div>
-          </div>
+      {/* Quick Testing Presets */}
+      <div className="agri-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', background: 'var(--bg-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            💧 Quick Irrigation Presets: Select Scenario
+          </span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>1-Click Simulation</span>
         </div>
-      ) : null}
 
-      {/* 4 Interactive Field Condition Inputs */}
-      <div className="agri-card" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', color: 'var(--color-primary-dark)' }}>
-          Field & Weather Inputs (4 Parameters)
-        </h3>
-        <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.2rem' }}>
-          Adjust your field conditions and click "Get Irrigation Advice" to recalculate water requirements.
-        </p>
-
-        <form onSubmit={handleFormSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.2rem' }}>
-            {/* 1. Soil Moisture */}
-            <div>
-              <label className="form-label">
-                1. Soil Moisture: <strong>{soilMoisture}%</strong>
-              </label>
-              <input
-                type="range"
-                min="5"
-                max="95"
-                value={soilMoisture}
-                onChange={(e) => setSoilMoisture(Number(e.target.value))}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              />
-              <span className="form-help">
-                {soilMoisture < 40 ? 'Dry / Deficit' : soilMoisture < 70 ? 'Adequate / Moist' : 'Wet / Saturated'}
-              </span>
-            </div>
-
-            {/* 2. Weather Forecast */}
-            <div>
-              <label className="form-label">2. Weather Forecast</label>
-              <select value={weatherForecast} onChange={(e) => setWeatherForecast(e.target.value)}>
-                <option value="Partly Sunny">Partly Sunny / Mild</option>
-                <option value="Sunny / Dry">Sunny / Dry & Clear</option>
-                <option value="Rain likely within 24 hours">Rain likely within 24 hours (बारिश की संभावना)</option>
-                <option value="Heavy Rain expected">Heavy Rain Expected (भारी वर्षा)</option>
-                <option value="High Heatwave / Windy">High Heatwave / Hot Winds</option>
-                <option value="Overcast / High Humidity">Overcast / High Humidity</option>
-              </select>
-            </div>
-
-            {/* 3. Crop Type */}
-            <div>
-              <label className="form-label">3. Crop Type</label>
-              <select value={cropType} onChange={(e) => setCropType(e.target.value)}>
-                <option value="Tomato">Tomato (टमाटर / ટામેટા)</option>
-                <option value="Wheat">Wheat (गेहूं / ઘઉં)</option>
-                <option value="Rice (Paddy)">Rice / Paddy (धान / ડાંગર)</option>
-                <option value="Cotton">Cotton (कपास / કપાસ)</option>
-                <option value="Sugarcane">Sugarcane (गन्ना / શેરડી)</option>
-                <option value="Maize">Maize / Corn (मक्का / મકાઈ)</option>
-                <option value="Groundnut">Groundnut (मूंगफली / મગફળી)</option>
-                <option value="Potato">Potato (आलू / બટાકા)</option>
-                <option value="Chickpea">Chickpea / Gram (चना / ચણા)</option>
-              </select>
-            </div>
-
-            {/* 4. Growth Stage */}
-            <div>
-              <label className="form-label">4. Current Growth Stage</label>
-              <select value={growthStage} onChange={(e) => setGrowthStage(e.target.value)}>
-                <option value="Seedling / Germination">Seedling / Germination (0-3 Weeks)</option>
-                <option value="Vegetative">Vegetative Growth (3-6 Weeks)</option>
-                <option value="Flowering">Flowering & Reproductive (6-10 Weeks)</option>
-                <option value="Maturity / Ripening">Maturity / Harvesting</option>
-              </select>
-            </div>
-          </div>
-
-          <button type="submit" className="btn-primary" disabled={isLoading} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Droplets size={18} />
-            <span>{isLoading ? 'Recalculating...' : 'Get Irrigation Advice'}</span>
-          </button>
-        </form>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.65rem' }}>
+          {presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className="btn-secondary"
+              onClick={() => handleApplyPreset(preset)}
+              style={{
+                textAlign: 'left',
+                justifyContent: 'space-between',
+                padding: '0.65rem 0.85rem',
+                minHeight: 'auto',
+                background: 'var(--bg-surface)',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-sky)' }}>
+                  {preset.title}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{preset.desc}</div>
+              </div>
+              <ArrowRight size={14} color="var(--color-sky)" />
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Best Irrigation Practices */}
-      <div className="agri-card" style={{ background: 'var(--bg-muted)', borderColor: 'var(--border-subtle)' }}>
-        <h4 style={{ fontSize: '0.95rem', color: 'var(--color-primary-dark)', marginBottom: '0.5rem' }}>
-          💧 3 Practical Water Saving Tips
-        </h4>
-        <ul style={{ paddingLeft: '1.25rem', fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          <li><strong>Water at Sunrise:</strong> Irrigating between 6:00 AM and 8:30 AM minimizes evaporation loss by up to 35%.</li>
-          <li><strong>Avoid Leaf Wetting:</strong> Keeping leaves dry drastically lowers fungal spore germination (Early & Late Blight).</li>
-          <li><strong>Mulching:</strong> Apply organic crop residue or plastic mulch to lock in root zone moisture.</li>
-        </ul>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', alignItems: 'flex-start' }}>
+        
+        {/* ===================================================
+            1. IRRIGATION PARAMETERS FORM
+           =================================================== */}
+        <div className="agri-card" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <Sliders size={20} color="var(--color-sky)" />
+            <div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                Sensor & Farm Inputs
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                Adjust soil moisture or weather forecast to update watering guidance
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleFormSubmit}>
+            {/* Soil Moisture Slider & Value */}
+            <div className="form-group" style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label className="form-label" style={{ marginBottom: 0, fontWeight: 700, color: 'var(--text-main)' }}>
+                  Current Soil Moisture Level
+                </label>
+                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: moisture < 35 ? 'var(--color-warning)' : 'var(--color-sky)' }}>
+                  {moisture}%
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="10"
+                max="90"
+                value={moisture}
+                onChange={(e) => setFormData({ ...formData, soil_moisture: Number(e.target.value) })}
+                style={{ width: '100%', accentColor: 'var(--color-sky)', cursor: 'pointer' }}
+              />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                <span>10% (Dry / Wilt)</span>
+                <span>40% - 60% (Optimal Zone)</span>
+                <span>90% (Saturated)</span>
+              </div>
+            </div>
+
+            {/* Crop Type & Growth Stage */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Crop Type</label>
+                <select
+                  value={formData.crop_type}
+                  onChange={(e) => setFormData({ ...formData, crop_type: e.target.value })}
+                >
+                  <option value="Tomato">Tomato (टमाटर)</option>
+                  <option value="Wheat">Wheat (गेहूं)</option>
+                  <option value="Cotton">Cotton (कपास)</option>
+                  <option value="Sugarcane">Sugarcane (गन्ना)</option>
+                  <option value="Soybean">Soybean (सोयाबीन)</option>
+                  <option value="Potato">Potato (आलू)</option>
+                  <option value="Rice">Rice (धान / Paddy)</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Growth Stage</label>
+                <select
+                  value={formData.growth_stage}
+                  onChange={(e) => setFormData({ ...formData, growth_stage: e.target.value })}
+                >
+                  <option value="Germination / Seedling">Germination / Seedling</option>
+                  <option value="Vegetative Growth">Vegetative Growth</option>
+                  <option value="Flowering / Reproductive">Flowering / Reproductive</option>
+                  <option value="Fruit / Grain Formation">Fruit / Grain Formation</option>
+                  <option value="Maturity / Ripening">Maturity / Ripening</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Weather Forecast & Expected Rainfall */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', marginBottom: '1.25rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Weather Forecast</label>
+                <select
+                  value={formData.weather_forecast}
+                  onChange={(e) => setFormData({ ...formData, weather_forecast: e.target.value })}
+                >
+                  <option value="Sunny & Clear">Sunny & Clear</option>
+                  <option value="Partly Sunny">Partly Sunny</option>
+                  <option value="Partly Cloudy">Partly Cloudy</option>
+                  <option value="Rain / Showers Expected">Rain / Showers Expected</option>
+                  <option value="Heavy Rain Alert">Heavy Rain Alert</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Expected Rainfall (mm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="150"
+                  value={formData.expected_rainfall_mm}
+                  onChange={(e) => setFormData({ ...formData, expected_rainfall_mm: Number(e.target.value) })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary btn-block"
+              disabled={isLoading}
+              style={{ padding: '0.85rem', fontSize: '1rem', fontWeight: 800, justifyContent: 'center' }}
+            >
+              <Droplets size={18} />
+              <span>{isLoading ? 'Computing Schedule...' : 'Calculate Irrigation Advice'}</span>
+            </button>
+          </form>
+        </div>
+
+        {/* ===================================================
+            2. IRRIGATION DECISION & ADVICE RESULT
+           =================================================== */}
+        <div>
+          {isLoading && !adviceResult ? (
+            <div className="agri-card" style={{ padding: '3.5rem 1.5rem', textAlign: 'center' }}>
+              <div className="spinner" style={{ width: '44px', height: '44px', borderWidth: '4px' }} />
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--color-primary-dark)', fontWeight: 800, marginTop: '1rem' }}>
+                Analyzing Soil Moisture & Crop Water Balance...
+              </h3>
+            </div>
+          ) : adviceResult ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Primary Decision Card */}
+              <div
+                className="agri-card"
+                style={{
+                  borderLeft: adviceResult.irrigation_required
+                    ? '6px solid var(--color-warning)'
+                    : adviceResult.badge_severity === 'warning'
+                    ? '6px solid var(--color-sky)'
+                    : '6px solid var(--color-success)',
+                  background: 'var(--bg-surface)',
+                  padding: '1.5rem',
+                  marginBottom: 0,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                      <StatusBadge
+                        status={adviceResult.badge_severity}
+                        label={adviceResult.irrigation_required ? 'Action Needed' : 'Water Conserved'}
+                        size="sm"
+                      />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {formData.crop_type} ({formData.growth_stage})
+                      </span>
+                    </div>
+
+                    <h2
+                      style={{
+                        fontSize: '1.6rem',
+                        fontWeight: 800,
+                        color: adviceResult.irrigation_required
+                          ? 'var(--color-warning)'
+                          : adviceResult.badge_severity === 'warning'
+                          ? 'var(--color-sky)'
+                          : 'var(--color-success)',
+                        margin: 0,
+                      }}
+                    >
+                      {adviceResult.status_title}
+                    </h2>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Next Cycle</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {adviceResult.next_irrigation_time}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Plain-Language Explanation of WHY */}
+                <div style={{ background: 'var(--bg-muted)', padding: '1rem', borderRadius: 'var(--radius-md)', margin: '1rem 0' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                    Why This Advice:
+                  </h4>
+                  <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                    {adviceResult.reason}
+                  </p>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Current Moisture</span>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-sky)', marginTop: '0.15rem' }}>
+                      {adviceResult.metrics.soil_moisture_level}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Suggested Duration</span>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                      {adviceResult.metrics.suggested_duration_mins > 0 ? `${adviceResult.metrics.suggested_duration_mins} mins` : '0 mins'}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Water Volume</span>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.15rem' }}>
+                      {adviceResult.metrics.water_volume_liters_per_sqm > 0 ? `${adviceResult.metrics.water_volume_liters_per_sqm} L/m²` : 'None'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Practical Irrigation Guidelines */}
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-primary-dark)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Sparkles size={15} color="var(--color-primary)" />
+                    <span>Agronomic Water Management Guidelines</span>
+                  </h4>
+
+                  <ul style={{ paddingLeft: '1.2rem', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem', margin: 0 }}>
+                    {adviceResult.guidelines?.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
       </div>
     </div>
   );

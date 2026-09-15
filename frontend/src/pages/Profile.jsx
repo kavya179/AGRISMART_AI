@@ -32,6 +32,12 @@ export default function Profile({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const roleInfo = ROLE_CONFIG[form.role || currentRole] || ROLE_CONFIG[ROLES.FARMER];
 
+  React.useEffect(() => {
+    if (userProfile) {
+      setForm(userProfile);
+    }
+  }, [userProfile]);
+
   const handleRoleChange = (newRole) => {
     const updated = switchActiveRole(newRole);
     setForm(updated);

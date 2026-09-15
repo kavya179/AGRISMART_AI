@@ -45,6 +45,9 @@ import {
   getStoredScanHistory,
   getStoredUserProfile,
   saveStoredUserProfile,
+  getStoredActivePage,
+  saveStoredActivePage,
+  clearAllAppData,
 } from './services/historyStorage';
 import './App.css';
 
@@ -56,8 +59,22 @@ export default function App() {
   });
 
   const [activePage, setActivePage] = useState(() => {
-    const initialRole = getStoredUserProfile()?.role || ROLES.FARMER;
-    return getRoleDashboard(initialRole);
+    const profile = getStoredUserProfile();
+    const isAuth = Boolean(profile);
+    const storedPage = getStoredActivePage();
+
+    if (isAuth && profile?.role) {
+      if (storedPage && canAccessPage(storedPage, profile.role, true)) {
+        return storedPage;
+      }
+      return getRoleDashboard(profile.role);
+    } else {
+      // Default to landing (Home Overview) page for all public visitors
+      if (storedPage && ['register', 'help'].includes(storedPage)) {
+        return storedPage;
+      }
+      return 'landing';
+    }
   });
 
   const [selectedResult, setSelectedResult] = useState(null);
@@ -75,11 +92,21 @@ export default function App() {
 
   // Route protection: ensure user does not access pages outside their role permissions
   useEffect(() => {
-    if (!canAccessPage(activePage, currentRole)) {
-      console.warn(`Access denied to '${activePage}' for role '${currentRole}'. Redirecting to role dashboard.`);
-      setActivePage(getRoleDashboard(currentRole));
+    const isAuth = Boolean(userProfile);
+    if (!canAccessPage(activePage, currentRole, isAuth)) {
+      console.warn(`[RouteGuard] Access denied to '${activePage}' for role '${currentRole}' (Auth: ${isAuth}). Redirecting.`);
+      if (!isAuth) {
+        setActivePage('landing');
+        saveStoredActivePage('landing');
+      } else {
+        const roleDashboard = getRoleDashboard(currentRole);
+        setActivePage(roleDashboard);
+        saveStoredActivePage(roleDashboard);
+      }
+    } else {
+      saveStoredActivePage(activePage);
     }
-  }, [activePage, currentRole]);
+  }, [activePage, currentRole, userProfile]);
 
   const handleLanguageChange = (newLang) => {
     setLanguage(newLang);
@@ -95,16 +122,25 @@ export default function App() {
     const updated = switchActiveRole(newRole);
     setUserProfile(updated);
     setCurrentRole(newRole);
-    setActivePage(getRoleDashboard(newRole));
+    const targetDashboard = getRoleDashboard(newRole);
+    setActivePage(targetDashboard);
+    saveStoredActivePage(targetDashboard);
   };
 
   const handleLogout = () => {
-    setActivePage('login');
+    clearAllAppData();
+    setUserProfile(null);
+    setCurrentRole(ROLES.FARMER);
+    setActivePage('landing');
+    saveStoredActivePage('landing');
   };
 
   const handleBackToDashboard = () => {
-    setActivePage(getRoleDashboard(currentRole));
+    const target = getRoleDashboard(currentRole);
+    setActivePage(target);
+    saveStoredActivePage(target);
   };
+
 
   return (
     <AppLayout

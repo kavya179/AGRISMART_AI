@@ -232,6 +232,7 @@ class DiseaseModelService:
 
             raw_class_name = None
             confidence_val = 0.90
+            top_predictions = []
 
             # 1. If PyTorch model is loaded, run neural inference
             if HAS_TORCH and self.model is not None and len(self.idx_to_class) > 0:
@@ -250,6 +251,17 @@ class DiseaseModelService:
                         pred_idx_val = pred_idx.item()
                         raw_class_name = self.idx_to_class.get(str(pred_idx_val), self.idx_to_class.get(pred_idx_val, None))
                         confidence_val = round(float(conf.item()), 4)
+
+                        # Compute Top Predictions
+                        k = min(3, len(self.idx_to_class))
+                        top_k_probs, top_k_indices = torch.topk(probs, k, dim=1)
+                        for p, idx in zip(top_k_probs[0], top_k_indices[0]):
+                            c_raw = self.idx_to_class.get(str(idx.item()), self.idx_to_class.get(idx.item(), f"Class_{idx.item()}"))
+                            top_predictions.append({
+                                "class": format_display_name(c_raw),
+                                "raw_class": c_raw,
+                                "confidence": round(float(p.item()), 4),
+                            })
                 except Exception as ml_err:
                     logger.warning(f"PyTorch tensor inference fell back to CV pathology: {ml_err}")
                     raw_class_name = None
@@ -257,6 +269,9 @@ class DiseaseModelService:
             # 2. Fallback to Computer Vision Pathology & Feature Analyzer
             if not raw_class_name:
                 raw_class_name, confidence_val = analyze_image_pathology(pil_img)
+                top_predictions = [
+                    {"class": format_display_name(raw_class_name), "raw_class": raw_class_name, "confidence": confidence_val}
+                ]
 
             # Format human-readable output
             formatted_class = format_display_name(raw_class_name)
@@ -267,8 +282,11 @@ class DiseaseModelService:
                 "success": True,
                 "prediction": {
                     "class": formatted_class,
+                    "predicted_class": formatted_class,
+                    "raw_class": raw_class_name,
                     "confidence": confidence_val,
                     "status": health_status,
+                    "top_predictions": top_predictions,
                 },
                 "guidance": {
                     "precautions": precautions,

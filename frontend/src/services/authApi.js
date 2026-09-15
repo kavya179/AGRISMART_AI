@@ -207,9 +207,10 @@ export async function registerUser(userData = {}) {
  * Logout User & Clear Session
  */
 export async function logoutUser() {
-  localStorage.removeItem('agrismart_token');
+  clearAllAppData();
   return { success: true };
 }
+
 
 /**
  * Get Current Active User Session Profile

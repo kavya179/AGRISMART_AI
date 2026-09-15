@@ -41,11 +41,33 @@ export async function getSmartIrrigationAdvice(params) {
         body: JSON.stringify(params),
       }, 4000);
 
-      if (data && data.success && data.irrigation_advice) {
+      if (data && data.success) {
+        const isRequired = Boolean(data.irrigation_required);
+        const isRain = data.priority === 'None / Delay' || (data.recommended_action || '').toLowerCase().includes('delay');
+        const badgeSeverity = isRequired ? (data.priority?.includes('High') ? 'danger' : 'warning') : (isRain ? 'warning' : 'healthy');
+        const statusTitle = isRequired ? (data.priority?.includes('High') ? 'Critical Irrigation Required' : 'Irrigation Recommended') : (isRain ? 'Delay Irrigation — Rain Forecasted' : 'No Irrigation Required');
+
+        const advice = data.irrigation_advice || {
+          irrigation_required: isRequired,
+          status_title: statusTitle,
+          badge_severity: badgeSeverity,
+          recommended_action: data.recommended_action || 'No watering needed today',
+          reason: data.reason || 'Soil moisture is optimal for current crop growth stage.',
+          next_irrigation_time: isRequired ? 'Today during early morning window (06:00 - 08:30 AM)' : (isRain ? 'Postpone by 48 hours (Evaluate post-rain)' : 'Tomorrow at 06:00 AM (Routine Check)'),
+          metrics: {
+            soil_moisture_level: data.metrics?.current_moisture || `${params.soil_moisture}%`,
+            suggested_duration_mins: isRequired ? 45 : 0,
+            water_per_sqm: data.metrics?.crop_coefficient_kc ? `${data.metrics.crop_coefficient_kc * 12} L/m²` : '0 L/m²',
+            estimated_savings_liters: isRain ? 23000 : 0,
+            crop_stage: data.metrics?.crop_stage || `${params.crop_type || 'Tomato'} (${params.growth_stage || 'Flowering'})`,
+            suggested_method: data.metrics?.suggested_method || 'Drip Irrigation',
+          },
+        };
+
         return {
           success: true,
           isRealBackend: true,
-          irrigation_advice: data.irrigation_advice,
+          irrigation_advice: advice,
         };
       }
     } catch (err) {

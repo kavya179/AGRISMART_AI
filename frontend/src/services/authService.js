@@ -125,9 +125,20 @@ export const ROLE_PERMISSIONS = {
 };
 
 /**
+ * Public pages accessible without logging in
+ */
+export const PUBLIC_PAGES = ['landing', 'login', 'register', 'help'];
+
+/**
  * Check if current user is authorized to access a given page
  */
-export function canAccessPage(pageId, role = getCurrentRole()) {
+export function canAccessPage(pageId, role = getCurrentRole(), isAuth = false) {
+  // 1. If not authenticated, only public pages are allowed
+  if (!isAuth) {
+    return PUBLIC_PAGES.includes(pageId);
+  }
+
+  // 2. If authenticated, check role-specific permissions
   const allowed = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS[ROLES.FARMER];
   return allowed.includes(pageId);
 }
@@ -146,3 +157,4 @@ export function getRoleDashboard(role = getCurrentRole()) {
       return 'dashboard';
   }
 }
+

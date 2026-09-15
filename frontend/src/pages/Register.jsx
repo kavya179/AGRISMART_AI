@@ -13,6 +13,7 @@ import {
   Phone,
   User,
   MapPin,
+  ChevronLeft,
 } from 'lucide-react';
 import { registerUser, ROLES, ROLE_CONFIG } from '../services/authApi';
 import { getRoleDashboard } from '../services/authService';
@@ -134,7 +135,26 @@ export default function Register({ setActivePage, setUserProfile, setCurrentRole
   };
 
   return (
-    <div style={{ maxWidth: '580px', margin: '1.75rem auto', padding: '0 1rem' }}>
+    <div style={{ maxWidth: '580px', margin: '1.5rem auto 3rem', padding: '0 1rem' }}>
+      {/* Top Back Navigation */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <button
+          onClick={() => setActivePage('landing')}
+          className="btn-secondary"
+          style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+        >
+          <ChevronLeft size={16} />
+          <span>Back to Home Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActivePage('login')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+        >
+          Sign In Instead →
+        </button>
+      </div>
+
       <div className="agri-card" style={{ padding: '2rem 1.75rem', boxShadow: 'var(--shadow-elevated)' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div
@@ -145,7 +165,10 @@ export default function Register({ setActivePage, setUserProfile, setCurrentRole
               borderRadius: '50%',
               color: 'var(--color-primary)',
               marginBottom: '0.75rem',
+              cursor: 'pointer',
             }}
+            onClick={() => setActivePage('landing')}
+            title="Click to visit Home Overview"
           >
             <Sprout size={32} />
           </div>

@@ -27,6 +27,7 @@ export default function TopNavbar({
   setLanguage,
   setIsMobileOpen,
   onOpenNotifications,
+  onLogout,
 }) {
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -85,7 +86,10 @@ export default function TopNavbar({
         <div className="role-switcher-container">
           <button
             className={`role-switcher-btn ${roleInfo.badgeClass}`}
-            onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+            onClick={() => {
+              setRoleDropdownOpen(!roleDropdownOpen);
+              setProfileMenuOpen(false);
+            }}
             title="Switch Workspace Role"
           >
             <span className="role-icon">{getRoleIcon(currentRole)}</span>
@@ -153,11 +157,14 @@ export default function TopNavbar({
         </button>
 
         {/* User Profile Mini Menu */}
-        <div className="profile-menu-container">
+        <div className="profile-menu-container" style={{ position: 'relative' }}>
           <button
             className="user-profile-btn"
-            onClick={() => setActivePage('profile')}
-            title="View Profile"
+            onClick={() => {
+              setProfileMenuOpen(!profileMenuOpen);
+              setRoleDropdownOpen(false);
+            }}
+            title="User Menu"
           >
             <div className="user-avatar">
               {userProfile?.avatar || <User size={16} />}
@@ -166,7 +173,63 @@ export default function TopNavbar({
               <span className="user-name-compact">{userProfile?.fullName || 'User'}</span>
               <span className="user-role-compact">{roleInfo.label}</span>
             </div>
+            <ChevronDown size={12} className={`dropdown-chevron ${profileMenuOpen ? 'open' : ''}`} />
           </button>
+
+          {profileMenuOpen && (
+            <>
+              <div
+                className="dropdown-backdrop"
+                onClick={() => setProfileMenuOpen(false)}
+              />
+              <div
+                className="role-dropdown-menu"
+                style={{ right: 0, minWidth: '200px' }}
+              >
+                <div className="dropdown-header">
+                  {userProfile?.fullName || 'User Account'}
+                </div>
+                <button
+                  className="role-dropdown-item"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setActivePage('profile');
+                  }}
+                >
+                  <div className="item-icon-wrap"><User size={16} /></div>
+                  <div className="item-text-wrap">
+                    <span className="item-label">Profile & Settings</span>
+                  </div>
+                </button>
+                <button
+                  className="role-dropdown-item"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    setActivePage('help');
+                  }}
+                >
+                  <div className="item-icon-wrap"><HelpCircle size={16} /></div>
+                  <div className="item-text-wrap">
+                    <span className="item-label">Help & Guide</span>
+                  </div>
+                </button>
+                <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', margin: '0.25rem 0' }} />
+                <button
+                  className="role-dropdown-item"
+                  style={{ color: '#ef4444' }}
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    if (onLogout) onLogout();
+                  }}
+                >
+                  <div className="item-icon-wrap"><LogOut size={16} color="#ef4444" /></div>
+                  <div className="item-text-wrap">
+                    <span className="item-label" style={{ color: '#ef4444' }}>Sign Out</span>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

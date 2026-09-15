@@ -17,6 +17,60 @@ function verifyPassword(password, salt, storedHash) {
   return hash === storedHash;
 }
 
+// Seed default accounts for the 3 roles
+const defaultSeedUsers = [
+  {
+    id: 'user_farmer_01',
+    fullName: 'Ramesh Patil',
+    email: 'farmer@agrismart.ai',
+    phone: '9876543210',
+    role: 'farmer',
+    preferredLanguage: 'en',
+    location: 'Pune, Maharashtra, India',
+    state: 'Maharashtra',
+    district: 'Pune',
+    village: 'Khed',
+    farmSize: '4.5 Acres',
+    farmSizeAcres: '4.5',
+    primaryCrop: 'Tomato',
+    soilType: 'Black Soil',
+    crops: ['Tomato', 'Wheat'],
+  },
+  {
+    id: 'user_expert_01',
+    fullName: 'Dr. Anjali Sharma',
+    email: 'expert@agrismart.ai',
+    phone: '9822334455',
+    role: 'expert',
+    preferredLanguage: 'en',
+    location: 'Anand, Gujarat, India',
+    specialization: 'Plant Pathology & IPM Solutions',
+    institution: 'State Agricultural Extension Center',
+  },
+  {
+    id: 'user_admin_01',
+    fullName: 'System Administrator',
+    email: 'admin@agrismart.ai',
+    phone: '9988776655',
+    role: 'admin',
+    preferredLanguage: 'en',
+    location: 'New Delhi, India',
+  },
+];
+
+defaultSeedUsers.forEach((u) => {
+  const { salt, hash } = hashPassword('password123');
+  memoryUsers.set(u.email, {
+    ...u,
+    passwordHash: hash,
+    salt,
+    createdAt: new Date().toISOString(),
+  });
+  if (u.phone) {
+    memoryUsers.set(u.phone, memoryUsers.get(u.email));
+  }
+});
+
 /**
  * POST /api/auth/register
  * Handles user account creation for Farmers, Experts, and Admins
@@ -100,9 +154,11 @@ const register = async (req, res, next) => {
       try {
         existingUser = await User.findOne({ email: cleanEmail }).maxTimeMS(2000);
       } catch (dbErr) {
-        existingUser = memoryUsers.get(cleanEmail);
+        existingUser = null;
       }
-    } else {
+    }
+
+    if (!existingUser) {
       existingUser = memoryUsers.get(cleanEmail);
     }
 
@@ -230,9 +286,11 @@ const login = async (req, res, next) => {
           $or: [{ email: identifier }, { phoneNumber: identifier }],
         }).maxTimeMS(2000);
       } catch (e) {
-        user = memoryUsers.get(identifier);
+        user = null;
       }
-    } else {
+    }
+
+    if (!user) {
       user = memoryUsers.get(identifier);
     }
 

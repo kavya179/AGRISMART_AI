@@ -64,6 +64,7 @@ export default function AppLayout({
           setLanguage={setLanguage}
           setIsMobileOpen={setMobileSidebarOpen}
           onOpenNotifications={() => setNotificationsOpen(true)}
+          onLogout={onLogout}
         />
 
         {/* Dynamic Page Content */}

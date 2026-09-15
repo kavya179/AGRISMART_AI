@@ -1,23 +1,42 @@
 import React, { useState } from 'react';
-import { Phone, ArrowRight, ShieldCheck, Sprout, Stethoscope, Shield, AlertCircle, Loader } from 'lucide-react';
+import {
+  Sprout,
+  Stethoscope,
+  Shield,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  Loader,
+  Lock,
+  Mail,
+  Key,
+  ChevronLeft,
+  Home,
+} from 'lucide-react';
 import { ROLES, ROLE_CONFIG, switchActiveRole } from '../services/authService';
 import { loginUser } from '../services/authApi';
+import { getRoleDashboard } from '../services/authService';
 
 export default function Login({ setActivePage, setUserProfile, setCurrentRole }) {
   const [selectedRole, setSelectedRole] = useState(ROLES.FARMER);
-  const [phone, setPhone] = useState('9876543210');
-  const [otp, setOtp] = useState('1234');
-  const [step, setStep] = useState('phone'); // 'phone' | 'otp'
+  const [emailOrPhone, setEmailOrPhone] = useState('farmer@agrismart.ai');
+  const [password, setPassword] = useState('password123');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
-  const handleSendOtp = (e) => {
-    e.preventDefault();
-    if (phone.length >= 10) {
-      setErrorMsg(null);
-      setStep('otp');
-    } else {
-      setErrorMsg('Please enter a valid 10-digit mobile number.');
+  const handleRoleSelect = (role) => {
+    setSelectedRole(role);
+    setErrorMsg(null);
+    if (role === ROLES.FARMER) {
+      setEmailOrPhone('farmer@agrismart.ai');
+      setPassword('password123');
+    } else if (role === ROLES.EXPERT) {
+      setEmailOrPhone('expert@agrismart.ai');
+      setPassword('password123');
+    } else if (role === ROLES.ADMIN) {
+      setEmailOrPhone('admin@agrismart.ai');
+      setPassword('password123');
     }
   };
 
@@ -25,27 +44,76 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!emailOrPhone.trim()) {
+      setErrorMsg('Please enter your email or registered phone number.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password) {
+      setErrorMsg('Please enter your password.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const res = await loginUser({ phone, role: selectedRole, otp });
+      const isEmail = emailOrPhone.includes('@');
+      const credentials = {
+        email: isEmail ? emailOrPhone.trim().toLowerCase() : undefined,
+        phone: !isEmail ? emailOrPhone.trim() : undefined,
+        phoneNumber: !isEmail ? emailOrPhone.trim() : undefined,
+        password,
+        role: selectedRole,
+      };
+
+      const res = await loginUser(credentials);
+
       if (res && res.success) {
-        const updatedProfile = res.user;
-        if (setUserProfile) setUserProfile(updatedProfile);
-        if (setCurrentRole) setCurrentRole(selectedRole);
-        const targetDashboard = ROLE_CONFIG[selectedRole].dashboardPage;
-        setActivePage(targetDashboard);
+        const user = res.user;
+        const resolvedRole = user.role || selectedRole;
+
+        setSuccessMsg(`Welcome back, ${user.fullName || 'User'}! Opening ${ROLE_CONFIG[resolvedRole].label} Workspace...`);
+
+        if (setUserProfile) setUserProfile(user);
+        if (setCurrentRole) setCurrentRole(resolvedRole);
+
+        setTimeout(() => {
+          const targetDashboard = getRoleDashboard(resolvedRole);
+          setActivePage(targetDashboard);
+        }, 900);
       } else {
-        setErrorMsg(res?.error || 'Login failed. Please verify credentials.');
+        setErrorMsg(res?.error || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
-      setErrorMsg('An unexpected error occurred during login. Please retry.');
+      setErrorMsg(err.message || 'An unexpected error occurred during login. Please retry.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '480px', margin: '2.5rem auto', padding: '0 1rem' }}>
+    <div style={{ maxWidth: '480px', margin: '1.5rem auto 3rem', padding: '0 1rem' }}>
+      {/* Top Back Navigation */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <button
+          onClick={() => setActivePage('landing')}
+          className="btn-secondary"
+          style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+        >
+          <ChevronLeft size={16} />
+          <span>Back to Home Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActivePage('register')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+        >
+          Create New Account →
+        </button>
+      </div>
+
       <div className="agri-card" style={{ padding: '2rem 1.75rem', boxShadow: 'var(--shadow-elevated)' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div
@@ -56,7 +124,10 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
               borderRadius: '50%',
               color: 'var(--color-primary)',
               marginBottom: '0.75rem',
+              cursor: 'pointer',
             }}
+            onClick={() => setActivePage('landing')}
+            title="Click to visit Home Overview"
           >
             <Sprout size={36} />
           </div>
@@ -64,7 +135,7 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
             AgriSmart AI Portal
           </h2>
           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Select your workspace role to access your records
+            Sign in to your role-specific agricultural dashboard
           </p>
         </div>
 
@@ -76,7 +147,7 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
             <button
               type="button"
-              onClick={() => setSelectedRole(ROLES.FARMER)}
+              onClick={() => handleRoleSelect(ROLES.FARMER)}
               className={selectedRole === ROLES.FARMER ? 'btn-primary' : 'btn-secondary'}
               style={{
                 flexDirection: 'column',
@@ -92,7 +163,7 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
 
             <button
               type="button"
-              onClick={() => setSelectedRole(ROLES.EXPERT)}
+              onClick={() => handleRoleSelect(ROLES.EXPERT)}
               className={selectedRole === ROLES.EXPERT ? 'btn-primary' : 'btn-secondary'}
               style={{
                 flexDirection: 'column',
@@ -108,7 +179,7 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
 
             <button
               type="button"
-              onClick={() => setSelectedRole(ROLES.ADMIN)}
+              onClick={() => handleRoleSelect(ROLES.ADMIN)}
               className={selectedRole === ROLES.ADMIN ? 'btn-primary' : 'btn-secondary'}
               style={{
                 flexDirection: 'column',
@@ -124,6 +195,7 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
           </div>
         </div>
 
+        {/* Error Alert Box */}
         {errorMsg && (
           <div
             style={{
@@ -139,86 +211,102 @@ export default function Login({ setActivePage, setUserProfile, setCurrentRole })
               marginBottom: '1rem',
             }}
           >
-            <AlertCircle size={16} />
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {step === 'phone' ? (
-          <form onSubmit={handleSendOtp}>
-            <div className="form-group">
-              <label className="form-label">
-                {selectedRole === ROLES.ADMIN ? 'Admin Email / Phone' : 'Registered Mobile Number'}
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span
-                  style={{
-                    padding: '0.7rem 0.8rem',
-                    background: 'var(--bg-muted)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '8px',
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  placeholder="e.g. 9876543210"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  maxLength="10"
-                  required
-                  style={{ flex: 1 }}
-                />
-              </div>
-            </div>
+        {/* Success Alert Box */}
+        {successMsg && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '8px',
+              color: '#15803d',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>{successMsg}</span>
+          </div>
+        )}
 
-            <button type="submit" className="btn-primary btn-block" style={{ marginTop: '1rem', padding: '0.85rem' }}>
-              <span>Send OTP Verification Code</span>
-              <ArrowRight size={16} />
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label className="form-label">Enter 4-Digit OTP</label>
+        <form onSubmit={handleLogin}>
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label className="form-label">
+              {selectedRole === ROLES.ADMIN ? 'Admin Email / Username' : 'Registered Email or Phone'}
+            </label>
+            <div style={{ position: 'relative' }}>
               <input
                 type="text"
-                placeholder="• • • •"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                maxLength="4"
-                style={{ textAlign: 'center', fontSize: '1.4rem', letterSpacing: '0.5rem', fontWeight: 700 }}
+                placeholder="e.g. farmer@agrismart.ai or 9876543210"
+                value={emailOrPhone}
+                onChange={(e) => setEmailOrPhone(e.target.value)}
                 required
+                style={{ width: '100%', paddingLeft: '2.4rem' }}
               />
-              <span className="form-help" style={{ textAlign: 'center', display: 'block', marginTop: '0.4rem' }}>
-                Sent to +91 {phone} • (Use any 4 digits in demo mode)
-              </span>
+              <Mail
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: '0.8rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                }}
+              />
             </div>
+          </div>
 
-            <button type="submit" className="btn-primary btn-block" style={{ marginTop: '1rem', padding: '0.85rem' }}>
-              <span>Sign In as {ROLE_CONFIG[selectedRole].label}</span>
-            </button>
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label">Password</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="password"
+                placeholder="Enter account password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{ width: '100%', paddingLeft: '2.4rem' }}
+              />
+              <Lock
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: '0.8rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                }}
+              />
+            </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={() => setStep('phone')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                fontSize: '0.85rem',
-                width: '100%',
-                marginTop: '0.75rem',
-                cursor: 'pointer',
-              }}
-            >
-              Change phone number
-            </button>
-          </form>
-        )}
+          <button
+            type="submit"
+            className="btn-primary btn-block"
+            style={{ padding: '0.85rem', minHeight: '44px' }}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader size={16} className="spin" />
+                <span>Signing In...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In as {ROLE_CONFIG[selectedRole].label}</span>
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </form>
 
         <div
           style={{

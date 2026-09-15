@@ -22,6 +22,10 @@ export default function AdminUsers({ initialRoleFilter = 'all' }) {
   const [roleFilter, setRoleFilter] = useState(initialRoleFilter);
   const [searchQuery, setSearchQuery] = useState('');
 
+  React.useEffect(() => {
+    setRoleFilter(initialRoleFilter);
+  }, [initialRoleFilter]);
+
   const filteredUsers = userList.filter((u) => {
     const matchesRole = roleFilter === 'all' || u.role.toLowerCase() === roleFilter.toLowerCase();
     const matchesQuery =
